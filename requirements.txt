@@ -9,3 +9,4 @@ beautifulsoup4>=4.9.3
 feedparser>=6.0.10
 appdirs>=1.4.4
 seaborn
+Pillow==10.0.0 
