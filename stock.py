@@ -2,8 +2,6 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
-import math
-from pathlib import Path
 from datetime import date, timedelta, datetime
 import streamlit as st
 import yfinance as yf
@@ -60,7 +58,7 @@ def render_header(title):
 
 render_header("📈 S&P 500 Stock Analysis")
 
-# Add responsive banner image
+# Function to resize and display images
 def display_image(image_path, caption, height=200):
     try:
         img = Image.open(image_path)
@@ -69,10 +67,11 @@ def display_image(image_path, caption, height=200):
     except Exception as e:
         st.error(f"Error loading image: {e}")
 
-# Display banner image below the header
+# Add banner image
 display_image(
     "stock-photo-american-financial-market-index-s-and-p-ticker-spx-on-blue-finance-background-from-numbers-2331803611.jpg",
-    "Financial Insights at Your Fingertips"
+    "Financial Insights at Your Fingertips",
+    height=200
 )
 
 # Create tabs
@@ -86,7 +85,7 @@ with tabs[0]:
         suite of tools for analyzing S&P 500 stocks and making informed decisions.
     """)
 
-    # Display a large home image
+    # Display a home image
     display_image(
         "tyler-prahm-lmV3gJSAgbo-unsplash.jpg",
         "Dynamic Market Trends",
@@ -158,15 +157,57 @@ with tabs[1]:
 with tabs[2]:
     st.header("📈 Stock Comparison")
     st.write("Compare the performance of multiple stocks over a selected date range.")
-    comparison_image_url = "https://cdn.pixabay.com/photo/2018/01/31/07/15/chart-3120463_1280.jpg"
 
-    # Fetch and resize image dynamically
-    try:
-        response = requests.get(comparison_image_url, stream=True)
-        img = Image.open(response.raw)
-        display_image("comparison_image.jpg", "Compare Performance Across Stocks")
-    except Exception as e:
-        st.error(f"Error loading comparison image: {e}")
+    # Comparison logic
+    symbols = st.multiselect("Select Stocks (e.g., AAPL, MSFT, GOOG)", ["AAPL", "MSFT", "GOOG", "AMZN", "TSLA"], default=["AAPL", "MSFT"])
+    date_range = st.slider("Select Date Range", min_value=date.today() - timedelta(days=1825), max_value=date.today(), value=(date.today() - timedelta(days=365), date.today()))
+
+    if symbols:
+        try:
+            data = yf.download(symbols, start=date_range[0], end=date_range[1], auto_adjust=True)
+            plt.figure(figsize=(14, 7))
+            for symbol in symbols:
+                sns.lineplot(data=data['Close'][symbol], label=symbol)
+            plt.title("Stock Comparison", fontsize=16)
+            plt.xlabel("Date", fontsize=12)
+            plt.ylabel("Price (USD)", fontsize=12)
+            plt.legend(loc="upper left")
+            st.pyplot(plt)
+        except Exception as e:
+            st.error(f"Error fetching comparison data: {e}")
+
+# Tab: Stock News
+with tabs[3]:
+    st.header("📰 Stock News")
+    ticker_symbol = st.text_input("Enter stock ticker for news (e.g., AAPL):", key="news_ticker")
+
+    def extract_news_from_google_rss(ticker):
+        url = f"https://news.google.com/rss/search?q={ticker}+stock&hl=en-US&gl=US&ceid=US:en"
+        feed = requests.get(url)
+        if feed.status_code == 200:
+            feed = feedparser.parse(feed.content)
+            return [{"title": entry.title, "url": entry.link, "date": entry.published} for entry in feed.entries[:10]]
+        return []
+
+    if ticker_symbol:
+        news = extract_news_from_google_rss(ticker_symbol)
+        for article in news:
+            st.write(f"**{article['title']}**")
+            st.write(f"[Read more]({article['url']})")
+
+# Tab: Contacts
+with tabs[4]:
+    st.header("📞 Contact Us")
+    st.write("We'd love to hear from you! Please share your feedback.")
+    name = st.text_input("Name")
+    email = st.text_input("Email")
+    message = st.text_area("Message")
+    if st.button("Submit"):
+        if name and email and message:
+            st.success("Thank you for your feedback!")
+        else:
+            st.error("All fields are required.")
 
 # Footer
-render_footer()
+st.markdown("---")
+st.markdown("<div style='text-align:center'><small>© 2024 International University of Japan. All rights reserved.</small></div>", unsafe_allow_html=True)
