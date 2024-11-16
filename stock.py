@@ -276,22 +276,33 @@ with tabs[3]:
     ticker_symbol = st.text_input("Enter stock ticker for news (e.g., AAPL):", key="news_ticker")
 
     def extract_news_from_google_rss(ticker):
-        url = f"https://news.google.com/rss/search?q={ticker}+stock&hl=en-US&gl=US&ceid=US:en"
-        feed = requests.get(url)
-        if feed.status_code == 200:
-            feed = feedparser.parse(feed.content)
-            return [{"title": entry.title, "url": entry.link, "date": entry.published} for entry in feed.entries[:10]]
-        return []
+        """Fetch news articles for a given stock ticker using Google News RSS."""
+        try:
+            url = f"https://news.google.com/rss/search?q={ticker}+stock&hl=en-US&gl=US&ceid=US:en"
+            feed = feedparser.parse(url)  # Parse the URL directly
+            news_articles = []
+            for entry in feed.entries[:10]:  # Limit to the latest 10 articles
+                news_articles.append({
+                    "title": entry.title,
+                    "url": entry.link,
+                    "date": datetime(*entry.published_parsed[:6])  # Convert date to datetime object
+                })
+            return news_articles
+        except Exception as e:
+            st.error(f"Failed to fetch news: {e}")
+            return []
 
-if ticker_symbol:
-    news = extract_news_from_google_rss(ticker_symbol)
-    if news:
-        st.subheader(f"News for {ticker_symbol.upper()}")
-        for article in news:
-            st.write(f"**{article['title']}**")
-            st.write(f"[Read more]({article['url']}) - {article['date'].strftime('%Y-%m-%d')}")
-    else:
-        st.info("No news found for this ticker.")
+    if ticker_symbol:
+        # Fetch news
+        news = extract_news_from_google_rss(ticker_symbol)
+
+        if news:
+            st.subheader(f"Latest News for {ticker_symbol.upper()}")
+            for article in news:
+                st.write(f"**{article['title']}**")
+                st.write(f"[Read more]({article['url']}) - {article['date'].strftime('%Y-%m-%d')}")
+        else:
+            st.info("No news found for this ticker.")
 
 # Tab: Contacts
 with tabs[4]:
