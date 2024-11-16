@@ -124,7 +124,7 @@ with tabs[1]:
                     buy_signals = 0
                     sell_signals = 0
 
-                    # Initialize a Seaborn figure
+                    # Initialize a Seaborn figure for line charts
                     plt.figure(figsize=(14, 8))
                     sns.set_style("whitegrid")
 
@@ -178,11 +178,31 @@ with tabs[1]:
                     data['MACD'] = short_ema - long_ema
                     data['Signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
                     sns.lineplot(data=data, x=data.index, y="MACD", label="MACD")
-                    sns.lineplot(data=data, x=data.index, y="Signal", label="Signal Line")
+                    sns.lineplot(data=data, x=data.index, y="Signal", label="MACD Signal Line")
                     if data['MACD'].iloc[-1] > data['Signal'].iloc[-1]:
                         buy_signals += 1
                     else:
                         sell_signals += 1
+
+                    # Stochastic Oscillator
+                    stoch_period = st.slider("Stochastic Oscillator Period", 5, 50, 14)
+                    data['Stoch_K'] = ((data['Close'] - data['Low'].rolling(window=stoch_period).min()) /
+                                       (data['High'].rolling(window=stoch_period).max() -
+                                        data['Low'].rolling(window=stoch_period).min())) * 100
+                    sns.lineplot(data=data, x=data.index, y="Stoch_K", label=f"Stochastic Oscillator (%K)")
+                    if data['Stoch_K'].iloc[-1] < 20:
+                        buy_signals += 1
+                    elif data['Stoch_K'].iloc[-1] > 80:
+                        sell_signals += 1
+
+                    # Average True Range (ATR)
+                    atr_period = st.slider("ATR Period", 5, 50, 14)
+                    data['True_Range'] = data[['High', 'Low', 'Close']].apply(
+                        lambda row: max(row['High'] - row['Low'],
+                                        abs(row['High'] - row['Close']),
+                                        abs(row['Low'] - row['Close'])), axis=1)
+                    data['ATR'] = data['True_Range'].rolling(window=atr_period).mean()
+                    sns.lineplot(data=data, x=data.index, y="ATR", label=f"Average True Range ({atr_period})")
 
                     # Display Indicators Plot
                     plt.title(f"{ticker_symbol.upper()} Technical Indicators", fontsize=16)
