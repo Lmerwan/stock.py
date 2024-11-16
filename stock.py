@@ -11,7 +11,7 @@ import yfinance as yf
 import requests
 from bs4 import BeautifulSoup
 import feedparser
-
+import seaborn as sns
 # Set the cache directory
 import appdirs as ad
 ad.user_cache_dir = lambda *args: "/tmp"
@@ -54,9 +54,6 @@ with tabs[0]:
     st.image("https://st3.depositphotos.com/3108485/32120/i/600/depositphotos_321205098-stock-photo-businessman-plan-graph-growth-and.jpg", caption="Today's Stock Insights")
 
 # Tab: Stock Analysis
-# Tab: Stock Analysis
-# Tab: Stock Analysis
-# Tab: Stock Analysis
 with tabs[1]:
     st.header("Stock Analysis")
     ticker_symbol = st.text_input("Enter stock ticker (e.g., AAPL, MSFT):", "AAPL", key="ticker")
@@ -82,8 +79,6 @@ with tabs[1]:
                 show_ema = st.checkbox("Show EMA")
                 show_rsi = st.checkbox("Show RSI")
                 show_macd = st.checkbox("Show MACD")
-                show_vwap = st.checkbox("Show VWAP")
-                show_stochastic = st.checkbox("Show Stochastic Oscillator")
 
                 # Ask the user if they want to see the analysis
                 if st.button("Show Analysis"):
@@ -91,19 +86,16 @@ with tabs[1]:
                     buy_signals = 0
                     sell_signals = 0
 
-                    # Plot indicators
+                    # Create a Seaborn plot for the price
                     st.subheader(f"{ticker_symbol} Price Chart with Indicators")
-                    fig = go.Figure()
-
-                    # Add Close Price
-                    fig.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name="Close Price"))
+                    plt.figure(figsize=(12, 6))
+                    sns.lineplot(data=data, x=data.index, y="Close", label="Close Price")
 
                     # SMA (Short and Long)
                     if show_sma_short:
                         sma_short_period = st.slider("SMA (Short) Period", 5, 50, 20)
                         data['SMA_Short'] = data['Close'].rolling(window=sma_short_period).mean()
-                        fig.add_trace(go.Scatter(x=data.index, y=data['SMA_Short'], mode='lines', name="SMA (Short)"))
-                        # Buy/Sell Signal: Price > SMA Short -> Buy, otherwise Sell
+                        sns.lineplot(data=data, x=data.index, y="SMA_Short", label=f"SMA (Short, {sma_short_period})")
                         if data['Close'].iloc[-1] > data['SMA_Short'].iloc[-1]:
                             buy_signals += 1
                         else:
@@ -112,8 +104,7 @@ with tabs[1]:
                     if show_sma_long:
                         sma_long_period = st.slider("SMA (Long) Period", 50, 200, 100)
                         data['SMA_Long'] = data['Close'].rolling(window=sma_long_period).mean()
-                        fig.add_trace(go.Scatter(x=data.index, y=data['SMA_Long'], mode='lines', name="SMA (Long)"))
-                        # Buy/Sell Signal: Price > SMA Long -> Buy, otherwise Sell
+                        sns.lineplot(data=data, x=data.index, y="SMA_Long", label=f"SMA (Long, {sma_long_period})")
                         if data['Close'].iloc[-1] > data['SMA_Long'].iloc[-1]:
                             buy_signals += 1
                         else:
@@ -123,28 +114,10 @@ with tabs[1]:
                     if show_ema:
                         ema_period = st.slider("EMA Period", 5, 100, 20)
                         data['EMA'] = data['Close'].ewm(span=ema_period, adjust=False).mean()
-                        fig.add_trace(go.Scatter(x=data.index, y=data['EMA'], mode='lines', name="EMA"))
-                        # Buy/Sell Signal: Price > EMA -> Buy, otherwise Sell
+                        sns.lineplot(data=data, x=data.index, y="EMA", label=f"EMA ({ema_period})")
                         if data['Close'].iloc[-1] > data['EMA'].iloc[-1]:
                             buy_signals += 1
                         else:
-                            sell_signals += 1
-
-                    # RSI
-                    if show_rsi:
-                        rsi_period = st.slider("RSI Period", 5, 50, 14)
-                        delta = data['Close'].diff()
-                        gain = delta.where(delta > 0, 0)
-                        loss = -delta.where(delta < 0, 0)
-                        avg_gain = gain.rolling(window=rsi_period).mean()
-                        avg_loss = loss.rolling(window=rsi_period).mean()
-                        rs = avg_gain / avg_loss
-                        data['RSI'] = 100 - (100 / (1 + rs))
-                        st.line_chart(data['RSI'])
-                        # Buy/Sell Signal: RSI < 30 -> Buy, RSI > 70 -> Sell
-                        if data['RSI'].iloc[-1] < 30:
-                            buy_signals += 1
-                        elif data['RSI'].iloc[-1] > 70:
                             sell_signals += 1
 
                     # MACD
@@ -153,46 +126,19 @@ with tabs[1]:
                         long_ema = data['Close'].ewm(span=26, adjust=False).mean()
                         data['MACD'] = short_ema - long_ema
                         data['Signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
-                        fig.add_trace(go.Scatter(x=data.index, y=data['MACD'], mode='lines', name="MACD"))
-                        fig.add_trace(go.Scatter(x=data.index, y=data['Signal'], mode='lines', name="MACD Signal"))
-                        # Buy/Sell Signal: MACD > Signal -> Buy, otherwise Sell
+                        sns.lineplot(data=data, x=data.index, y="MACD", label="MACD")
+                        sns.lineplot(data=data, x=data.index, y="Signal", label="Signal (MACD)")
                         if data['MACD'].iloc[-1] > data['Signal'].iloc[-1]:
                             buy_signals += 1
                         else:
                             sell_signals += 1
 
-                    # VWAP
-                    if show_vwap:
-                        data['VWAP'] = (data['Volume'] * (data['High'] + data['Low'] + data['Close']) / 3).cumsum() / data['Volume'].cumsum()
-                        fig.add_trace(go.Scatter(x=data.index, y=data['VWAP'], mode='lines', name="VWAP"))
-                        # Buy/Sell Signal: Price > VWAP -> Buy, otherwise Sell
-                        if data['Close'].iloc[-1] > data['VWAP'].iloc[-1]:
-                            buy_signals += 1
-                        else:
-                            sell_signals += 1
-
-                    # Stochastic Oscillator
-                    if show_stochastic:
-                        low_min = data['Low'].rolling(window=14).min()
-                        high_max = data['High'].rolling(window=14).max()
-                        data['%K'] = (data['Close'] - low_min) * 100 / (high_max - low_min)
-                        data['%D'] = data['%K'].rolling(window=3).mean()
-                        fig.add_trace(go.Scatter(x=data.index, y=data['%K'], mode='lines', name="Stochastic %K"))
-                        fig.add_trace(go.Scatter(x=data.index, y=data['%D'], mode='lines', name="Stochastic %D"))
-                        # Buy/Sell Signal: %K < 20 -> Buy, %K > 80 -> Sell
-                        if data['%K'].iloc[-1] < 20:
-                            buy_signals += 1
-                        elif data['%K'].iloc[-1] > 80:
-                            sell_signals += 1
-
-                    # Update figure layout
-                    fig.update_layout(
-                        title=f"{ticker_symbol} Price Chart",
-                        xaxis_title="Date",
-                        yaxis_title="Price (USD)",
-                        xaxis_rangeslider_visible=True
-                    )
-                    st.plotly_chart(fig)
+                    # Render the Seaborn plot in Streamlit
+                    plt.title(f"{ticker_symbol} Price Chart with Indicators")
+                    plt.xlabel("Date")
+                    plt.ylabel("Price (USD)")
+                    plt.legend()
+                    st.pyplot(plt)
 
                     # Recommendation Summary
                     st.subheader("Recommendation Summary")
@@ -207,6 +153,7 @@ with tabs[1]:
 
             except Exception as e:
                 st.error(f"Error fetching data for {ticker_symbol}: {e}")
+
 
 
 # Tab: Stock Comparison
