@@ -3,20 +3,14 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
 import math
-import sqlite3
 from pathlib import Path
 from datetime import date, timedelta, datetime
 import streamlit as st
 import yfinance as yf
 import requests
-from bs4 import BeautifulSoup
-import feedparser
 from PIL import Image
-# Set the cache directory
-import appdirs as ad
-ad.user_cache_dir = lambda *args: "/tmp"
 
-# Page configuration
+# Set Streamlit page configuration
 st.set_page_config(
     page_title="Stock Price App",
     page_icon="📈",
@@ -24,40 +18,62 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Global Header
+# CSS for improved styling
+def apply_custom_css():
+    st.markdown("""
+        <style>
+        .header {
+            background-color: #1f4e79;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            color: white;
+            font-size: 36px;
+            margin: 0;
+        }
+        .image-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+        }
+        .image-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+apply_custom_css()
+
+# Render header
 def render_header(title):
     st.markdown(f"""
-    <div style="background-color:#1f4e79;padding:10px;border-radius:5px">
-        <h1 style="color:white;text-align:center;">{title}</h1>
-    </div>
+        <div class="header">
+            <h1>{title}</h1>
+        </div>
     """, unsafe_allow_html=True)
 
-# Global Footer
-def render_footer():
-    st.markdown("""
-    ---
-    <div style="text-align:center;">
-        <small>© 2024 International University of Japan. All rights reserved.</small>
-    </div>
-    """, unsafe_allow_html=True)
-
-# Render the header
 render_header("📈 S&P 500 Stock Analysis")
 
-# Resize and display the banner image
-try:
-    # Open the image using Pillow
-    img_path = "stock-photo-american-financial-market-index-s-and-p-ticker-spx-on-blue-finance-background-from-numbers-2331803611.jpg"
-    img = Image.open(img_path)
+# Add responsive banner image
+def display_image(image_path, caption, height=200):
+    try:
+        img = Image.open(image_path)
+        img_resized = img.resize((1200, height))  # Resize for consistent dimensions
+        st.image(img_resized, caption=caption, use_column_width=True)
+    except Exception as e:
+        st.error(f"Error loading image: {e}")
 
-    # Resize the image to match the header size (e.g., 800x100 pixels)
-    img_resized = img.resize((800, 100))
-
-    # Display the resized image
-    st.image(img_resized, caption="Financial Insights at Your Fingertips", use_column_width=False)
-except Exception as e:
-    st.error(f"Error loading image: {e}")
-
+# Display banner image below the header
+display_image(
+    "stock-photo-american-financial-market-index-s-and-p-ticker-spx-on-blue-finance-background-from-numbers-2331803611.jpg",
+    "Financial Insights at Your Fingertips"
+)
 
 # Create tabs
 tabs = st.tabs(["🏠 Home", "📊 Stock Analysis", "📈 Stock Comparison", "📰 Stock News", "📞 Contacts"])
@@ -66,18 +82,17 @@ tabs = st.tabs(["🏠 Home", "📊 Stock Analysis", "📈 Stock Comparison", "�
 with tabs[0]:
     st.header("Welcome to the Stock Analysis App")
     st.write("""
-    Explore stock trends, compare performances, and stay updated with the latest financial news. This app provides a comprehensive 
-    suite of tools for analyzing S&P 500 stocks and making informed decisions.
+        Explore stock trends, compare performances, and stay updated with the latest financial news. This app provides a comprehensive 
+        suite of tools for analyzing S&P 500 stocks and making informed decisions.
     """)
 
-    # Resize and display the banner image
-    home_image_path = "tyler-prahm-lmV3gJSAgbo-unsplash.jpg"
-    try:
-        img = Image.open(home_image_path)
-        img_resized = img.resize((800, 400))  # Resize the image to 800x400 pixels
-        st.image(img_resized, caption="Dynamic Market Trends", use_column_width=False)
-    except Exception as e:
-        st.error(f"Error loading home page image: {e}")
+    # Display a large home image
+    display_image(
+        "tyler-prahm-lmV3gJSAgbo-unsplash.jpg",
+        "Dynamic Market Trends",
+        height=300
+    )
+
 # Tab: Stock Analysis
 with tabs[1]:
     st.header("📊 Stock Analysis")
@@ -107,7 +122,6 @@ with tabs[1]:
 
                 # Analysis Button
                 if st.button("Analyze"):
-                    # Initialize a Seaborn plot
                     plt.figure(figsize=(12, 6))
                     sns.set_style("whitegrid")
 
@@ -130,25 +144,6 @@ with tabs[1]:
                         data['EMA'] = data['Close'].ewm(span=ema_period, adjust=False).mean()
                         sns.lineplot(data=data, x=data.index, y="EMA", label=f"EMA ({ema_period})")
 
-                    if show_rsi:
-                        rsi_period = st.slider("RSI Period", 5, 50, 14)
-                        delta = data['Close'].diff()
-                        gain = delta.where(delta > 0, 0)
-                        loss = -delta.where(delta < 0, 0)
-                        avg_gain = gain.rolling(window=rsi_period).mean()
-                        avg_loss = loss.rolling(window=rsi_period).mean()
-                        rs = avg_gain / avg_loss
-                        data['RSI'] = 100 - (100 / (1 + rs))
-                        st.line_chart(data['RSI'], height=250)
-
-                    if show_macd:
-                        short_ema = data['Close'].ewm(span=12, adjust=False).mean()
-                        long_ema = data['Close'].ewm(span=26, adjust=False).mean()
-                        data['MACD'] = short_ema - long_ema
-                        data['Signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
-                        sns.lineplot(data=data, x=data.index, y="MACD", label="MACD")
-                        sns.lineplot(data=data, x=data.index, y="Signal", label="Signal Line")
-
                     # Customize the plot
                     plt.title(f"{ticker_symbol} Price Chart with Indicators", fontsize=16)
                     plt.xlabel("Date", fontsize=12)
@@ -162,69 +157,16 @@ with tabs[1]:
 # Tab: Stock Comparison
 with tabs[2]:
     st.header("📈 Stock Comparison")
-    st.write("""
-    Compare the performance of multiple stocks over a selected date range.
-    """)
-
-    # Resize and display comparison image
+    st.write("Compare the performance of multiple stocks over a selected date range.")
     comparison_image_url = "https://cdn.pixabay.com/photo/2018/01/31/07/15/chart-3120463_1280.jpg"
+
+    # Fetch and resize image dynamically
     try:
         response = requests.get(comparison_image_url, stream=True)
         img = Image.open(response.raw)
-        img_resized = img.resize((800, 400))  # Resize the image to 800x400 pixels
-        st.image(img_resized, caption="Compare Performance Across Stocks", use_column_width=False)
+        display_image("comparison_image.jpg", "Compare Performance Across Stocks")
     except Exception as e:
         st.error(f"Error loading comparison image: {e}")
-
-    # Stock comparison logic
-    symbols = st.multiselect("Select Stocks (e.g., AAPL, MSFT, GOOG)", ["AAPL", "MSFT", "GOOG", "AMZN", "TSLA"], default=["AAPL", "MSFT"])
-    date_range = st.slider("Select Date Range", min_value=date.today() - timedelta(days=1825), max_value=date.today(), value=(date.today() - timedelta(days=365), date.today()))
-
-    if symbols:
-        try:
-            data = yf.download(symbols, start=date_range[0], end=date_range[1], auto_adjust=True)
-            plt.figure(figsize=(14, 7))
-            for symbol in symbols:
-                sns.lineplot(data=data['Close'][symbol], label=symbol)
-            plt.title("Stock Comparison", fontsize=16)
-            plt.xlabel("Date", fontsize=12)
-            plt.ylabel("Price (USD)", fontsize=12)
-            plt.legend(loc="upper left")
-            st.pyplot(plt)
-        except Exception as e:
-            st.error(f"Error fetching comparison data: {e}")
-
-# Tab: Stock News
-with tabs[3]:
-    st.header("📰 Stock News")
-    ticker_symbol = st.text_input("Enter stock ticker for news (e.g., AAPL):", key="news_ticker")
-
-    def extract_news_from_google_rss(ticker):
-        url = f"https://news.google.com/rss/search?q={ticker}+stock&hl=en-US&gl=US&ceid=US:en"
-        feed = feedparser.parse(url)
-        news_articles = []
-        for entry in feed.entries[:10]:
-            news_articles.append({"title": entry.title, "url": entry.link, "date": datetime(*entry.published_parsed[:6])})
-        return news_articles
-
-    if ticker_symbol:
-        news = extract_news_from_google_rss(ticker_symbol)
-        for article in news:
-            st.write(f"**{article['title']}**")
-            st.write(f"[Read more]({article['url']}) - {article['date'].strftime('%Y-%m-%d')}")
-
-# Tab: Contacts
-with tabs[4]:
-    st.header("📞 Contact Us")
-    st.write("We'd love to hear from you! Please share your feedback.")
-    name = st.text_input("Name")
-    email = st.text_input("Email")
-    message = st.text_area("Message")
-    if st.button("Submit"):
-        if name and email and message:
-            st.success("Thank you for your feedback!")
-        else:
-            st.error("All fields are required.")
 
 # Footer
 render_footer()
