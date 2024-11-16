@@ -76,6 +76,8 @@ with tabs[0]:
         use_column_width=True
     )
 
+import plotly.graph_objects as go
+
 # Tab: Stock Analysis
 with tabs[1]:
     st.header("📊 Stock Analysis")
@@ -118,8 +120,20 @@ with tabs[1]:
                 )
                 st.plotly_chart(fig)
 
+                # Indicator Selection
+                st.subheader("Select Indicators to Display")
+                indicators = {
+                    "SMA (Short)": st.checkbox("Show SMA (Short)"),
+                    "SMA (Long)": st.checkbox("Show SMA (Long)"),
+                    "EMA": st.checkbox("Show EMA"),
+                    "RSI": st.checkbox("Show RSI"),
+                    "MACD": st.checkbox("Show MACD"),
+                    "Stochastic Oscillator": st.checkbox("Show Stochastic Oscillator"),
+                    "ATR": st.checkbox("Show ATR")
+                }
+
                 # Show Indicators Button
-                if st.button("Show Technical Indicators"):
+                if st.button("Show Selected Indicators"):
                     st.subheader("Technical Indicators")
                     buy_signals = 0
                     sell_signals = 0
@@ -132,77 +146,84 @@ with tabs[1]:
                     sns.lineplot(data=data, x=data.index, y="Close", label="Close Price", color="blue")
 
                     # SMA (Short and Long)
-                    sma_short_period = st.slider("SMA (Short) Period", 5, 50, 20)
-                    data['SMA_Short'] = data['Close'].rolling(window=sma_short_period).mean()
-                    sns.lineplot(data=data, x=data.index, y="SMA_Short", label=f"SMA (Short, {sma_short_period})")
-                    if data['Close'].iloc[-1] > data['SMA_Short'].iloc[-1]:
-                        buy_signals += 1
-                    else:
-                        sell_signals += 1
+                    if indicators["SMA (Short)"]:
+                        sma_short_period = st.slider("SMA (Short) Period", 5, 50, 20)
+                        data['SMA_Short'] = data['Close'].rolling(window=sma_short_period).mean()
+                        sns.lineplot(data=data, x=data.index, y="SMA_Short", label=f"SMA (Short, {sma_short_period})")
+                        if data['Close'].iloc[-1] > data['SMA_Short'].iloc[-1]:
+                            buy_signals += 1
+                        else:
+                            sell_signals += 1
 
-                    sma_long_period = st.slider("SMA (Long) Period", 50, 200, 100)
-                    data['SMA_Long'] = data['Close'].rolling(window=sma_long_period).mean()
-                    sns.lineplot(data=data, x=data.index, y="SMA_Long", label=f"SMA (Long, {sma_long_period})")
-                    if data['Close'].iloc[-1] > data['SMA_Long'].iloc[-1]:
-                        buy_signals += 1
-                    else:
-                        sell_signals += 1
+                    if indicators["SMA (Long)"]:
+                        sma_long_period = st.slider("SMA (Long) Period", 50, 200, 100)
+                        data['SMA_Long'] = data['Close'].rolling(window=sma_long_period).mean()
+                        sns.lineplot(data=data, x=data.index, y="SMA_Long", label=f"SMA (Long, {sma_long_period})")
+                        if data['Close'].iloc[-1] > data['SMA_Long'].iloc[-1]:
+                            buy_signals += 1
+                        else:
+                            sell_signals += 1
 
                     # EMA
-                    ema_period = st.slider("EMA Period", 5, 100, 20)
-                    data['EMA'] = data['Close'].ewm(span=ema_period, adjust=False).mean()
-                    sns.lineplot(data=data, x=data.index, y="EMA", label=f"EMA ({ema_period})")
-                    if data['Close'].iloc[-1] > data['EMA'].iloc[-1]:
-                        buy_signals += 1
-                    else:
-                        sell_signals += 1
+                    if indicators["EMA"]:
+                        ema_period = st.slider("EMA Period", 5, 100, 20)
+                        data['EMA'] = data['Close'].ewm(span=ema_period, adjust=False).mean()
+                        sns.lineplot(data=data, x=data.index, y="EMA", label=f"EMA ({ema_period})")
+                        if data['Close'].iloc[-1] > data['EMA'].iloc[-1]:
+                            buy_signals += 1
+                        else:
+                            sell_signals += 1
 
                     # RSI
-                    rsi_period = st.slider("RSI Period", 5, 50, 14)
-                    delta = data['Close'].diff()
-                    gain = delta.where(delta > 0, 0)
-                    loss = -delta.where(delta < 0, 0)
-                    avg_gain = gain.rolling(window=rsi_period).mean()
-                    avg_loss = loss.rolling(window=rsi_period).mean()
-                    rs = avg_gain / avg_loss
-                    data['RSI'] = 100 - (100 / (1 + rs))
-                    st.line_chart(data['RSI'], height=250)
-                    if data['RSI'].iloc[-1] < 30:
-                        buy_signals += 1
-                    elif data['RSI'].iloc[-1] > 70:
-                        sell_signals += 1
+                    if indicators["RSI"]:
+                        rsi_period = st.slider("RSI Period", 5, 50, 14)
+                        delta = data['Close'].diff()
+                        gain = delta.where(delta > 0, 0)
+                        loss = -delta.where(delta < 0, 0)
+                        avg_gain = gain.rolling(window=rsi_period).mean()
+                        avg_loss = loss.rolling(window=rsi_period).mean()
+                        rs = avg_gain / avg_loss
+                        data['RSI'] = 100 - (100 / (1 + rs))
+                        st.line_chart(data['RSI'], height=250)
+                        if data['RSI'].iloc[-1] < 30:
+                            buy_signals += 1
+                        elif data['RSI'].iloc[-1] > 70:
+                            sell_signals += 1
 
                     # MACD
-                    short_ema = data['Close'].ewm(span=12, adjust=False).mean()
-                    long_ema = data['Close'].ewm(span=26, adjust=False).mean()
-                    data['MACD'] = short_ema - long_ema
-                    data['Signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
-                    sns.lineplot(data=data, x=data.index, y="MACD", label="MACD")
-                    sns.lineplot(data=data, x=data.index, y="Signal", label="MACD Signal Line")
-                    if data['MACD'].iloc[-1] > data['Signal'].iloc[-1]:
-                        buy_signals += 1
-                    else:
-                        sell_signals += 1
+                    if indicators["MACD"]:
+                        short_ema = data['Close'].ewm(span=12, adjust=False).mean()
+                        long_ema = data['Close'].ewm(span=26, adjust=False).mean()
+                        data['MACD'] = short_ema - long_ema
+                        data['Signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
+                        sns.lineplot(data=data, x=data.index, y="MACD", label="MACD")
+                        sns.lineplot(data=data, x=data.index, y="Signal", label="MACD Signal Line")
+                        if data['MACD'].iloc[-1] > data['Signal'].iloc[-1]:
+                            buy_signals += 1
+                        else:
+                            sell_signals += 1
 
                     # Stochastic Oscillator
-                    stoch_period = st.slider("Stochastic Oscillator Period", 5, 50, 14)
-                    data['Stoch_K'] = ((data['Close'] - data['Low'].rolling(window=stoch_period).min()) /
-                                       (data['High'].rolling(window=stoch_period).max() -
-                                        data['Low'].rolling(window=stoch_period).min())) * 100
-                    sns.lineplot(data=data, x=data.index, y="Stoch_K", label=f"Stochastic Oscillator (%K)")
-                    if data['Stoch_K'].iloc[-1] < 20:
-                        buy_signals += 1
-                    elif data['Stoch_K'].iloc[-1] > 80:
-                        sell_signals += 1
+                    if indicators["Stochastic Oscillator"]:
+                        stoch_period = st.slider("Stochastic Oscillator Period", 5, 50, 14)
+                        data['Stoch_K'] = ((data['Close'] - data['Low'].rolling(window=stoch_period).min()) /
+                                           (data['High'].rolling(window=stoch_period).max() -
+                                            data['Low'].rolling(window=stoch_period).min())) * 100
+                        sns.lineplot(data=data, x=data.index, y="Stoch_K", label=f"Stochastic Oscillator (%K)")
+                        if data['Stoch_K'].iloc[-1] < 20:
+                            buy_signals += 1
+                        elif data['Stoch_K'].iloc[-1] > 80:
+                            sell_signals += 1
 
-                    # Average True Range (ATR)
-                    atr_period = st.slider("ATR Period", 5, 50, 14)
-                    data['True_Range'] = data[['High', 'Low', 'Close']].apply(
-                        lambda row: max(row['High'] - row['Low'],
-                                        abs(row['High'] - row['Close']),
-                                        abs(row['Low'] - row['Close'])), axis=1)
-                    data['ATR'] = data['True_Range'].rolling(window=atr_period).mean()
-                    sns.lineplot(data=data, x=data.index, y="ATR", label=f"Average True Range ({atr_period})")
+                    # ATR
+                    if indicators["ATR"]:
+                        atr_period = st.slider("ATR Period", 5, 50, 14)
+                        data['True_Range'] = data[['High', 'Low', 'Close']].apply(
+                            lambda row: max(row['High'] - row['Low'],
+                                            abs(row['High'] - row['Close']),
+                                            abs(row['Low'] - row['Close'])), axis=1)
+                        data['ATR'] = data['True_Range'].rolling(window=atr_period).mean()
+                        sns.lineplot(data=data, x=data.index, y="ATR", label=f"ATR ({atr_period})")
 
                     # Display Indicators Plot
                     plt.title(f"{ticker_symbol.upper()} Technical Indicators", fontsize=16)
@@ -224,6 +245,7 @@ with tabs[1]:
 
             except Exception as e:
                 st.error(f"Error fetching data for {ticker_symbol}: {e}")
+
 
 # Tab: Stock Comparison
 with tabs[2]:
