@@ -58,22 +58,6 @@ def render_header(title):
 
 render_header("📈 S&P 500 Stock Analysis")
 
-# Function to resize and display images
-def display_image(image_path, caption, height=200):
-    try:
-        img = Image.open(image_path)
-        img_resized = img.resize((1200, height))  # Resize for consistent dimensions
-        st.image(img_resized, caption=caption, use_column_width=True)
-    except Exception as e:
-        st.error(f"Error loading image: {e}")
-
-# Add banner image
-display_image(
-    "stock-photo-american-financial-market-index-s-and-p-ticker-spx-on-blue-finance-background-from-numbers-2331803611.jpg",
-    "Financial Insights at Your Fingertips",
-    height=200
-)
-
 # Create tabs
 tabs = st.tabs(["🏠 Home", "📊 Stock Analysis", "📈 Stock Comparison", "📰 Stock News", "📞 Contacts"])
 
