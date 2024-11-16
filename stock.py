@@ -8,6 +8,7 @@ import yfinance as yf
 import requests
 from PIL import Image
 import plotly.graph_objects as go
+import feedparser
 # Set Streamlit page configuration
 st.set_page_config(
     page_title="Stock Price App",
