@@ -54,15 +54,16 @@ st.image(
 # Create tabs
 tabs = st.tabs(["🏠 Home", "📊 Stock Analysis", "📈 Stock Comparison", "📰 Stock News", "📞 Contacts"])
 
-# Tab: Home
+## Tab: Home
 with tabs[0]:
     st.header("Welcome to the Stock Analysis App")
     st.write("""
     Explore stock trends, compare performances, and stay updated with the latest financial news. This app provides a comprehensive 
     suite of tools for analyzing S&P 500 stocks and making informed decisions.
     """)
-    st.image("https://cdn.pixabay.com/photo/2015/07/15/07/27/financial-845636_1280.jpg", caption="Analyzing Trends Made Simple")
 
+    # Use the uploaded image on the Home page
+    st.image("/mnt/data/tyler-prahm-lmV3gJSAgbo-unsplash.jpg", caption="Dynamic Market Trends", use_column_width=True)
 # Tab: Stock Analysis
 with tabs[1]:
     st.header("📊 Stock Analysis")
