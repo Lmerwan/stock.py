@@ -283,11 +283,15 @@ with tabs[3]:
             return [{"title": entry.title, "url": entry.link, "date": entry.published} for entry in feed.entries[:10]]
         return []
 
-    if ticker_symbol:
-        news = extract_news_from_google_rss(ticker_symbol)
+if ticker_symbol:
+    news = extract_news_from_google_rss(ticker_symbol)
+    if news:
+        st.subheader(f"News for {ticker_symbol.upper()}")
         for article in news:
             st.write(f"**{article['title']}**")
-            st.write(f"[Read more]({article['url']})")
+            st.write(f"[Read more]({article['url']}) - {article['date'].strftime('%Y-%m-%d')}")
+    else:
+        st.info("No news found for this ticker.")
 
 # Tab: Contacts
 with tabs[4]:
