@@ -56,6 +56,7 @@ with tabs[0]:
 # Tab: Stock Analysis
 # Tab: Stock Analysis
 # Tab: Stock Analysis
+# Tab: Stock Analysis
 with tabs[1]:
     st.header("Stock Analysis")
     ticker_symbol = st.text_input("Enter stock ticker (e.g., AAPL, MSFT):", "AAPL", key="ticker")
@@ -84,76 +85,129 @@ with tabs[1]:
                 show_vwap = st.checkbox("Show VWAP")
                 show_stochastic = st.checkbox("Show Stochastic Oscillator")
 
-                # Plot indicators
-                st.subheader(f"{ticker_symbol} Price Chart with Indicators")
-                fig = go.Figure()
+                # Ask the user if they want to see the analysis
+                if st.button("Show Analysis"):
+                    # Initialize variables to count buy/sell signals
+                    buy_signals = 0
+                    sell_signals = 0
 
-                # Add Close Price
-                fig.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name="Close Price"))
+                    # Plot indicators
+                    st.subheader(f"{ticker_symbol} Price Chart with Indicators")
+                    fig = go.Figure()
 
-                # SMA (Short and Long)
-                if show_sma_short:
-                    sma_short_period = st.slider("SMA (Short) Period", 5, 50, 20)
-                    data['SMA_Short'] = data['Close'].rolling(window=sma_short_period).mean()
-                    fig.add_trace(go.Scatter(x=data.index, y=data['SMA_Short'], mode='lines', name="SMA (Short)"))
+                    # Add Close Price
+                    fig.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name="Close Price"))
 
-                if show_sma_long:
-                    sma_long_period = st.slider("SMA (Long) Period", 50, 200, 100)
-                    data['SMA_Long'] = data['Close'].rolling(window=sma_long_period).mean()
-                    fig.add_trace(go.Scatter(x=data.index, y=data['SMA_Long'], mode='lines', name="SMA (Long)"))
+                    # SMA (Short and Long)
+                    if show_sma_short:
+                        sma_short_period = st.slider("SMA (Short) Period", 5, 50, 20)
+                        data['SMA_Short'] = data['Close'].rolling(window=sma_short_period).mean()
+                        fig.add_trace(go.Scatter(x=data.index, y=data['SMA_Short'], mode='lines', name="SMA (Short)"))
+                        # Buy/Sell Signal: Price > SMA Short -> Buy, otherwise Sell
+                        if data['Close'].iloc[-1] > data['SMA_Short'].iloc[-1]:
+                            buy_signals += 1
+                        else:
+                            sell_signals += 1
 
-                # EMA
-                if show_ema:
-                    ema_period = st.slider("EMA Period", 5, 100, 20)
-                    data['EMA'] = data['Close'].ewm(span=ema_period, adjust=False).mean()
-                    fig.add_trace(go.Scatter(x=data.index, y=data['EMA'], mode='lines', name="EMA"))
+                    if show_sma_long:
+                        sma_long_period = st.slider("SMA (Long) Period", 50, 200, 100)
+                        data['SMA_Long'] = data['Close'].rolling(window=sma_long_period).mean()
+                        fig.add_trace(go.Scatter(x=data.index, y=data['SMA_Long'], mode='lines', name="SMA (Long)"))
+                        # Buy/Sell Signal: Price > SMA Long -> Buy, otherwise Sell
+                        if data['Close'].iloc[-1] > data['SMA_Long'].iloc[-1]:
+                            buy_signals += 1
+                        else:
+                            sell_signals += 1
 
-                # RSI
-                if show_rsi:
-                    rsi_period = st.slider("RSI Period", 5, 50, 14)
-                    delta = data['Close'].diff()
-                    gain = delta.where(delta > 0, 0)
-                    loss = -delta.where(delta < 0, 0)
-                    avg_gain = gain.rolling(window=rsi_period).mean()
-                    avg_loss = loss.rolling(window=rsi_period).mean()
-                    rs = avg_gain / avg_loss
-                    data['RSI'] = 100 - (100 / (1 + rs))
-                    st.line_chart(data['RSI'])
+                    # EMA
+                    if show_ema:
+                        ema_period = st.slider("EMA Period", 5, 100, 20)
+                        data['EMA'] = data['Close'].ewm(span=ema_period, adjust=False).mean()
+                        fig.add_trace(go.Scatter(x=data.index, y=data['EMA'], mode='lines', name="EMA"))
+                        # Buy/Sell Signal: Price > EMA -> Buy, otherwise Sell
+                        if data['Close'].iloc[-1] > data['EMA'].iloc[-1]:
+                            buy_signals += 1
+                        else:
+                            sell_signals += 1
 
-                # MACD
-                if show_macd:
-                    short_ema = data['Close'].ewm(span=12, adjust=False).mean()
-                    long_ema = data['Close'].ewm(span=26, adjust=False).mean()
-                    data['MACD'] = short_ema - long_ema
-                    data['Signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
-                    fig.add_trace(go.Scatter(x=data.index, y=data['MACD'], mode='lines', name="MACD"))
-                    fig.add_trace(go.Scatter(x=data.index, y=data['Signal'], mode='lines', name="MACD Signal"))
+                    # RSI
+                    if show_rsi:
+                        rsi_period = st.slider("RSI Period", 5, 50, 14)
+                        delta = data['Close'].diff()
+                        gain = delta.where(delta > 0, 0)
+                        loss = -delta.where(delta < 0, 0)
+                        avg_gain = gain.rolling(window=rsi_period).mean()
+                        avg_loss = loss.rolling(window=rsi_period).mean()
+                        rs = avg_gain / avg_loss
+                        data['RSI'] = 100 - (100 / (1 + rs))
+                        st.line_chart(data['RSI'])
+                        # Buy/Sell Signal: RSI < 30 -> Buy, RSI > 70 -> Sell
+                        if data['RSI'].iloc[-1] < 30:
+                            buy_signals += 1
+                        elif data['RSI'].iloc[-1] > 70:
+                            sell_signals += 1
 
-                # VWAP
-                if show_vwap:
-                    data['VWAP'] = (data['Volume'] * (data['High'] + data['Low'] + data['Close']) / 3).cumsum() / data['Volume'].cumsum()
-                    fig.add_trace(go.Scatter(x=data.index, y=data['VWAP'], mode='lines', name="VWAP"))
+                    # MACD
+                    if show_macd:
+                        short_ema = data['Close'].ewm(span=12, adjust=False).mean()
+                        long_ema = data['Close'].ewm(span=26, adjust=False).mean()
+                        data['MACD'] = short_ema - long_ema
+                        data['Signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
+                        fig.add_trace(go.Scatter(x=data.index, y=data['MACD'], mode='lines', name="MACD"))
+                        fig.add_trace(go.Scatter(x=data.index, y=data['Signal'], mode='lines', name="MACD Signal"))
+                        # Buy/Sell Signal: MACD > Signal -> Buy, otherwise Sell
+                        if data['MACD'].iloc[-1] > data['Signal'].iloc[-1]:
+                            buy_signals += 1
+                        else:
+                            sell_signals += 1
 
-                # Stochastic Oscillator
-                if show_stochastic:
-                    low_min = data['Low'].rolling(window=14).min()
-                    high_max = data['High'].rolling(window=14).max()
-                    data['%K'] = (data['Close'] - low_min) * 100 / (high_max - low_min)
-                    data['%D'] = data['%K'].rolling(window=3).mean()
-                    fig.add_trace(go.Scatter(x=data.index, y=data['%K'], mode='lines', name="Stochastic %K"))
-                    fig.add_trace(go.Scatter(x=data.index, y=data['%D'], mode='lines', name="Stochastic %D"))
+                    # VWAP
+                    if show_vwap:
+                        data['VWAP'] = (data['Volume'] * (data['High'] + data['Low'] + data['Close']) / 3).cumsum() / data['Volume'].cumsum()
+                        fig.add_trace(go.Scatter(x=data.index, y=data['VWAP'], mode='lines', name="VWAP"))
+                        # Buy/Sell Signal: Price > VWAP -> Buy, otherwise Sell
+                        if data['Close'].iloc[-1] > data['VWAP'].iloc[-1]:
+                            buy_signals += 1
+                        else:
+                            sell_signals += 1
 
-                # Update figure layout
-                fig.update_layout(
-                    title=f"{ticker_symbol} Price Chart",
-                    xaxis_title="Date",
-                    yaxis_title="Price (USD)",
-                    xaxis_rangeslider_visible=True
-                )
-                st.plotly_chart(fig)
+                    # Stochastic Oscillator
+                    if show_stochastic:
+                        low_min = data['Low'].rolling(window=14).min()
+                        high_max = data['High'].rolling(window=14).max()
+                        data['%K'] = (data['Close'] - low_min) * 100 / (high_max - low_min)
+                        data['%D'] = data['%K'].rolling(window=3).mean()
+                        fig.add_trace(go.Scatter(x=data.index, y=data['%K'], mode='lines', name="Stochastic %K"))
+                        fig.add_trace(go.Scatter(x=data.index, y=data['%D'], mode='lines', name="Stochastic %D"))
+                        # Buy/Sell Signal: %K < 20 -> Buy, %K > 80 -> Sell
+                        if data['%K'].iloc[-1] < 20:
+                            buy_signals += 1
+                        elif data['%K'].iloc[-1] > 80:
+                            sell_signals += 1
+
+                    # Update figure layout
+                    fig.update_layout(
+                        title=f"{ticker_symbol} Price Chart",
+                        xaxis_title="Date",
+                        yaxis_title="Price (USD)",
+                        xaxis_rangeslider_visible=True
+                    )
+                    st.plotly_chart(fig)
+
+                    # Recommendation Summary
+                    st.subheader("Recommendation Summary")
+                    st.write(f"**Buy Signals:** {buy_signals}")
+                    st.write(f"**Sell Signals:** {sell_signals}")
+                    if buy_signals > sell_signals:
+                        st.success("Overall Recommendation: **Buy**")
+                    elif sell_signals > buy_signals:
+                        st.warning("Overall Recommendation: **Sell**")
+                    else:
+                        st.info("Overall Recommendation: **Hold** (No clear majority)")
 
             except Exception as e:
                 st.error(f"Error fetching data for {ticker_symbol}: {e}")
+
 
 # Tab: Stock Comparison
 with tabs[2]:
