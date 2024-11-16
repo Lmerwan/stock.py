@@ -77,6 +77,7 @@ with tabs[0]:
     )
 
 
+# Tab: Stock Analysis
 with tabs[1]:
     st.header("📊 Stock Analysis")
     ticker_symbol = st.text_input("Enter stock ticker (e.g., AAPL, MSFT):", "AAPL", key="ticker")
@@ -95,140 +96,78 @@ with tabs[1]:
                 # Display current price
                 st.subheader(f"Current Price: {data['Close'].iloc[-1]:.2f} USD")
 
-                # Indicator Selection
-                st.subheader("Select Indicators")
-                show_sma_short = st.checkbox("Show SMA (Short)")
-                show_sma_long = st.checkbox("Show SMA (Long)")
-                show_ema = st.checkbox("Show EMA")
-                show_rsi = st.checkbox("Show RSI")
-                show_macd = st.checkbox("Show MACD")
-                show_bollinger = st.checkbox("Show Bollinger Bands")
-                show_vwap = st.checkbox("Show VWAP")
+                # Visualization Options
+                st.subheader("Visualization Options")
+                use_candlestick = st.checkbox("Show Candlestick Chart")
+                show_indicators = st.checkbox("Show Indicators (SMA, EMA, etc.)")
 
-                # Recommendation Button
-                if st.button("Recommendation"):
+                # Plot Candlestick Chart
+                if use_candlestick:
+                    st.subheader("Candlestick Chart")
+                    fig = go.Figure(data=[go.Candlestick(
+                        x=data.index,
+                        open=data['Open'],
+                        high=data['High'],
+                        low=data['Low'],
+                        close=data['Close'],
+                        increasing_line_color='green',
+                        decreasing_line_color='red',
+                        name="Candlesticks"
+                    )])
+                    fig.update_layout(
+                        title=f"{ticker_symbol} Candlestick Chart",
+                        xaxis_title="Date",
+                        yaxis_title="Price (USD)",
+                        xaxis_rangeslider_visible=False
+                    )
+                    st.plotly_chart(fig)
+
+                # Indicators with Seaborn Visualization
+                if show_indicators:
+                    st.subheader("Indicators and Line Charts")
                     buy_signals = 0
                     sell_signals = 0
 
-                    # Analyze Indicators
-                    plt.figure(figsize=(12, 6))
+                    # Initialize a Seaborn figure
+                    plt.figure(figsize=(14, 8))
                     sns.set_style("whitegrid")
 
                     # Plot Close Price
                     sns.lineplot(data=data, x=data.index, y="Close", label="Close Price", color="blue")
 
-                    # SMA (Short and Long)
-                    if show_sma_short:
-                        sma_short_period = st.slider("SMA (Short) Period", 5, 50, 20)
-                        data['SMA_Short'] = data['Close'].rolling(window=sma_short_period).mean()
-                        sns.lineplot(data=data, x=data.index, y="SMA_Short", label=f"SMA (Short, {sma_short_period})")
-                        if data['Close'].iloc[-1] > data['SMA_Short'].iloc[-1]:
-                            buy_signals += 1
-                        else:
-                            sell_signals += 1
-
-                    if show_sma_long:
-                        sma_long_period = st.slider("SMA (Long) Period", 50, 200, 100)
-                        data['SMA_Long'] = data['Close'].rolling(window=sma_long_period).mean()
-                        sns.lineplot(data=data, x=data.index, y="SMA_Long", label=f"SMA (Long, {sma_long_period})")
-                        if data['Close'].iloc[-1] > data['SMA_Long'].iloc[-1]:
-                            buy_signals += 1
-                        else:
-                            sell_signals += 1
+                    # SMA
+                    sma_period = st.slider("SMA Period", 5, 50, 20)
+                    data['SMA'] = data['Close'].rolling(window=sma_period).mean()
+                    sns.lineplot(data=data, x=data.index, y="SMA", label=f"SMA ({sma_period})")
 
                     # EMA
-                    if show_ema:
-                        ema_period = st.slider("EMA Period", 5, 100, 20)
-                        data['EMA'] = data['Close'].ewm(span=ema_period, adjust=False).mean()
-                        sns.lineplot(data=data, x=data.index, y="EMA", label=f"EMA ({ema_period})")
-                        if data['Close'].iloc[-1] > data['EMA'].iloc[-1]:
-                            buy_signals += 1
-                        else:
-                            sell_signals += 1
+                    ema_period = st.slider("EMA Period", 5, 100, 20)
+                    data['EMA'] = data['Close'].ewm(span=ema_period, adjust=False).mean()
+                    sns.lineplot(data=data, x=data.index, y="EMA", label=f"EMA ({ema_period})")
 
-                    # RSI
-                    if show_rsi:
-                        rsi_period = st.slider("RSI Period", 5, 50, 14)
-                        delta = data['Close'].diff()
-                        gain = delta.where(delta > 0, 0)
-                        loss = -delta.where(delta < 0, 0)
-                        avg_gain = gain.rolling(window=rsi_period).mean()
-                        avg_loss = loss.rolling(window=rsi_period).mean()
-                        rs = avg_gain / avg_loss
-                        data['RSI'] = 100 - (100 / (1 + rs))
-                        st.line_chart(data['RSI'], height=250)
-                        if data['RSI'].iloc[-1] < 30:
-                            buy_signals += 1
-                        elif data['RSI'].iloc[-1] > 70:
-                            sell_signals += 1
+                    # Display the Seaborn plot
+                    plt.title(f"{ticker_symbol} with Indicators", fontsize=16)
+                    plt.xlabel("Date", fontsize=12)
+                    plt.ylabel("Price (USD)", fontsize=12)
+                    plt.legend(loc="upper left")
+                    st.pyplot(plt)
 
-                    # MACD
-                    if show_macd:
-                        short_ema = data['Close'].ewm(span=12, adjust=False).mean()
-                        long_ema = data['Close'].ewm(span=26, adjust=False).mean()
-                        data['MACD'] = short_ema - long_ema
-                        data['Signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
-                        sns.lineplot(data=data, x=data.index, y="MACD", label="MACD")
-                        sns.lineplot(data=data, x=data.index, y="Signal", label="Signal Line")
-                        if data['MACD'].iloc[-1] > data['Signal'].iloc[-1]:
-                            buy_signals += 1
-                        else:
-                            sell_signals += 1
-
-                    # Bollinger Bands
-                    if show_bollinger:
-                        data['BB_Upper'] = data['Close'].rolling(window=20).mean() + (2 * data['Close'].rolling(window=20).std())
-                        data['BB_Lower'] = data['Close'].rolling(window=20).mean() - (2 * data['Close'].rolling(window=20).std())
-                        sns.lineplot(data=data, x=data.index, y="BB_Upper", label="Bollinger Upper", color="purple")
-                        sns.lineplot(data=data, x=data.index, y="BB_Lower", label="Bollinger Lower", color="purple")
-                        if data['Close'].iloc[-1] < data['BB_Lower'].iloc[-1]:
-                            buy_signals += 1
-                        elif data['Close'].iloc[-1] > data['BB_Upper'].iloc[-1]:
-                            sell_signals += 1
-
-                    # VWAP
-                    if show_vwap:
-                        data['VWAP'] = (data['Volume'] * (data['High'] + data['Low'] + data['Close']) / 3).cumsum() / data['Volume'].cumsum()
-                        sns.lineplot(data=data, x=data.index, y="VWAP", label="VWAP")
-                        if data['Close'].iloc[-1] > data['VWAP'].iloc[-1]:
-                            buy_signals += 1
-                        else:
-                            sell_signals += 1
-
-                    # Display Recommendation
-                    if buy_signals > sell_signals:
-                        st.markdown("""
-                            <div style="text-align: center; color: green; font-size: 32px;">
-                                <strong>Recommendation: BUY</strong>
-                            </div>
-                            <div class="firework"></div>
-                        """, unsafe_allow_html=True)
+                    # Recommendation Logic (Example for SMA)
+                    if data['Close'].iloc[-1] > data['SMA'].iloc[-1]:
+                        buy_signals += 1
                     else:
-                        st.markdown("""
-                            <div style="text-align: center; color: red; font-size: 32px;">
-                                <strong>Recommendation: SELL</strong>
-                            </div>
-                            <div class="firework"></div>
-                        """, unsafe_allow_html=True)
+                        sell_signals += 1
 
-                    # Firework CSS
-                    st.markdown("""
-                        <style>
-                        .firework {
-                            position: absolute;
-                            width: 10px;
-                            height: 10px;
-                            background-color: transparent;
-                            border-radius: 50%;
-                            animation: explosion 1s infinite ease-in-out;
-                        }
-                        @keyframes explosion {
-                            0% { transform: scale(0); }
-                            50% { transform: scale(1.5); }
-                            100% { transform: scale(0); }
-                        }
-                        </style>
-                    """, unsafe_allow_html=True)
+                    # Show recommendation results
+                    st.subheader("Recommendation Summary")
+                    st.write(f"**Buy Signals:** {buy_signals}")
+                    st.write(f"**Sell Signals:** {sell_signals}")
+                    if buy_signals > sell_signals:
+                        st.success("Overall Recommendation: BUY")
+                    elif sell_signals > buy_signals:
+                        st.error("Overall Recommendation: SELL")
+                    else:
+                        st.info("Overall Recommendation: HOLD")
 
             except Exception as e:
                 st.error(f"Error fetching data for {ticker_symbol}: {e}")
