@@ -54,7 +54,7 @@ st.image(
 # Create tabs
 tabs = st.tabs(["🏠 Home", "📊 Stock Analysis", "📈 Stock Comparison", "📰 Stock News", "📞 Contacts"])
 
-## Tab: Home
+# Tab: Home
 with tabs[0]:
     st.header("Welcome to the Stock Analysis App")
     st.write("""
@@ -62,8 +62,13 @@ with tabs[0]:
     suite of tools for analyzing S&P 500 stocks and making informed decisions.
     """)
 
-    # Use the uploaded image on the Home page
-    st.image("/mnt/data/tyler-prahm-lmV3gJSAgbo-unsplash.jpg", caption="Dynamic Market Trends", use_column_width=True)
+    # Load and display the uploaded image
+    image_path = "/mnt/data/tyler-prahm-lmV3gJSAgbo-unsplash.jpg"
+    try:
+        with open(image_path, "rb") as img_file:
+            st.image(img_file.read(), caption="Dynamic Market Trends", use_column_width=True)
+    except Exception as e:
+        st.error(f"Error loading the image: {e}")
 # Tab: Stock Analysis
 with tabs[1]:
     st.header("📊 Stock Analysis")
