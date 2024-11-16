@@ -156,6 +156,7 @@ with tabs[1]:
                 st.error(f"Error fetching data for {ticker_symbol}: {e}")
 
 # Tab: Stock Comparison
+# Tab: Stock Comparison
 with tabs[2]:
     st.header("Stock Comparison")
     symbols = st.multiselect("Select Stocks", ["AAPL", "MSFT", "GOOG", "AMZN", "TSLA"], default=["AAPL"])
@@ -163,38 +164,56 @@ with tabs[2]:
 
     if symbols:
         try:
-            data = yf.download(symbols, start=date_range[0], end=date_range[1], group_by="ticker")
+            # Fetch stock data
+            data = yf.download(symbols, start=date_range[0], end=date_range[1], group_by="ticker", auto_adjust=True)
 
-            # Indicator Selection for Comparison
-            st.subheader("Select Indicators for Comparison")
-            show_sma_comparison = st.checkbox("SMA")
-            show_ema_comparison = st.checkbox("EMA")
-            show_vwap_comparison = st.checkbox("VWAP")
+            # Ensure the data has a 'Close' column
+            if 'Close' not in data.columns:
+                st.error("No 'Close' data available for the selected stocks.")
+            else:
+                # Indicator Selection for Comparison
+                st.subheader("Select Indicators for Comparison")
+                show_sma_comparison = st.checkbox("SMA")
+                show_ema_comparison = st.checkbox("EMA")
+                show_vwap_comparison = st.checkbox("VWAP")
 
-            st.line_chart(data['Close'])
+                # Display the close prices
+                st.line_chart(data['Close'])
 
-            if show_sma_comparison:
-                sma_period = st.slider("SMA Period", 5, 50, 20)
-                for symbol in symbols:
-                    data[f'SMA_{symbol}'] = data['Close'][symbol].rolling(window=sma_period).mean()
-                    st.line_chart(data[f'SMA_{symbol}'])
+                # Add SMA for each stock
+                if show_sma_comparison:
+                    sma_period = st.slider("SMA Period", 5, 50, 20)
+                    sma_data = {}
+                    for symbol in symbols:
+                        sma_data[symbol] = data['Close'][symbol].rolling(window=sma_period).mean()
+                    sma_df = pd.DataFrame(sma_data)
+                    st.line_chart(sma_df)
 
-            if show_ema_comparison:
-                ema_period = st.slider("EMA Period", 5, 50, 20)
-                for symbol in symbols:
-                    data[f'EMA_{symbol}'] = data['Close'][symbol].ewm(span=ema_period, adjust=False).mean()
-                    st.line_chart(data[f'EMA_{symbol}'])
+                # Add EMA for each stock
+                if show_ema_comparison:
+                    ema_period = st.slider("EMA Period", 5, 50, 20)
+                    ema_data = {}
+                    for symbol in symbols:
+                        ema_data[symbol] = data['Close'][symbol].ewm(span=ema_period, adjust=False).mean()
+                    ema_df = pd.DataFrame(ema_data)
+                    st.line_chart(ema_df)
 
-            if show_vwap_comparison:
-                for symbol in symbols:
-                    high_low_close = data['High'][symbol] + data['Low'][symbol] + data['Close'][symbol]
-                    data[f'VWAP_{symbol}'] = (data['Volume'][symbol] * high_low_close / 3).cumsum() / data['Volume'][symbol].cumsum()
-                    st.line_chart(data[f'VWAP_{symbol}'])
+                # Add VWAP for each stock
+                if show_vwap_comparison:
+                    vwap_data = {}
+                    for symbol in symbols:
+                        high = data['High'][symbol]
+                        low = data['Low'][symbol]
+                        close = data['Close'][symbol]
+                        volume = data['Volume'][symbol]
+                        typical_price = (high + low + close) / 3
+                        vwap = (typical_price * volume).cumsum() / volume.cumsum()
+                        vwap_data[symbol] = vwap
+                    vwap_df = pd.DataFrame(vwap_data)
+                    st.line_chart(vwap_df)
 
         except Exception as e:
             st.error(f"Error fetching comparison data: {e}")
-
-
 
 # Tab: Stock News
 with tabs[3]:
