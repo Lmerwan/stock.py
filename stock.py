@@ -156,64 +156,66 @@ with tabs[1]:
                 st.error(f"Error fetching data for {ticker_symbol}: {e}")
 
 # Tab: Stock Comparison
-# Tab: Stock Comparison
 with tabs[2]:
     st.header("Stock Comparison")
-    symbols = st.multiselect("Select Stocks", ["AAPL", "MSFT", "GOOG", "AMZN", "TSLA"], default=["AAPL"])
-    date_range = st.slider("Select Date Range", min_value=date.today() - timedelta(days=1825), max_value=date.today(), value=(date.today() - timedelta(days=365), date.today()))
-
-    if symbols:
-        try:
-            # Fetch stock data
-            data = yf.download(symbols, start=date_range[0], end=date_range[1], group_by="ticker", auto_adjust=True)
-
-            # Ensure the data has a 'Close' column
-            if 'Close' not in data.columns:
-                st.error("No 'Close' data available for the selected stocks.")
+    st.write("This is the Visualization page. Show your plots here.")
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from datetime import date, timedelta
+    import yfinance as yf
+    import pandas as pd
+    # Title for date and stock selection
+    st.title('Select Date and Stocks')
+    # Date range selection
+    today = date.today()
+    min_date = today - timedelta(days=365 * 5)
+    max_date = today
+    date_range = st.slider(
+        "Select Date Range",
+        min_value=min_date,
+        max_value=max_date,
+        value=(today - timedelta(days=365), today)
+    )
+    sdate, edate = date_range
+    # Stock selection
+    symbols = ["AAPL", "MSFT", "GOOG", "AMZN", "TSLA"]
+    selected_stocks = st.multiselect(
+        "Select Stocks", symbols, default=["AAPL"]
+    )
+    # Stock comparison
+    st.title("Stock Comparison")
+    if selected_stocks:
+        # Fetch stock data
+        data = yf.download(
+            selected_stocks,
+            start=sdate,
+            end=edate,
+            interval="1d",
+            auto_adjust=True,
+            prepost=True
+        )
+        if data.empty:
+            st.error("Failed to fetch historical data or no data available for the selected period.")
+        else:
+            # Filter data for the selected date range
+            filtered_data = data['Close'][selected_stocks]
+            sdate_utc = pd.to_datetime(sdate).tz_localize('UTC')
+            edate_utc = pd.to_datetime(edate).tz_localize('UTC')
+            filtered_data = filtered_data[(filtered_data.index >= sdate_utc) & (filtered_data.index <= edate_utc)]
+            if not filtered_data.empty:
+                # Reset index to create a 'Date' column
+                filtered_data = filtered_data.reset_index()
+                filtered_data = filtered_data.rename(columns={'index': 'Date'})
+                # Plot the data
+                st.line_chart(
+                    filtered_data,
+                    x="Date",
+                    y=selected_stocks[0] if len(selected_stocks) == 1 else selected_stocks
+                )
             else:
-                # Indicator Selection for Comparison
-                st.subheader("Select Indicators for Comparison")
-                show_sma_comparison = st.checkbox("SMA")
-                show_ema_comparison = st.checkbox("EMA")
-                show_vwap_comparison = st.checkbox("VWAP")
-
-                # Display the close prices
-                st.line_chart(data['Close'])
-
-                # Add SMA for each stock
-                if show_sma_comparison:
-                    sma_period = st.slider("SMA Period", 5, 50, 20)
-                    sma_data = {}
-                    for symbol in symbols:
-                        sma_data[symbol] = data['Close'][symbol].rolling(window=sma_period).mean()
-                    sma_df = pd.DataFrame(sma_data)
-                    st.line_chart(sma_df)
-
-                # Add EMA for each stock
-                if show_ema_comparison:
-                    ema_period = st.slider("EMA Period", 5, 50, 20)
-                    ema_data = {}
-                    for symbol in symbols:
-                        ema_data[symbol] = data['Close'][symbol].ewm(span=ema_period, adjust=False).mean()
-                    ema_df = pd.DataFrame(ema_data)
-                    st.line_chart(ema_df)
-
-                # Add VWAP for each stock
-                if show_vwap_comparison:
-                    vwap_data = {}
-                    for symbol in symbols:
-                        high = data['High'][symbol]
-                        low = data['Low'][symbol]
-                        close = data['Close'][symbol]
-                        volume = data['Volume'][symbol]
-                        typical_price = (high + low + close) / 3
-                        vwap = (typical_price * volume).cumsum() / volume.cumsum()
-                        vwap_data[symbol] = vwap
-                    vwap_df = pd.DataFrame(vwap_data)
-                    st.line_chart(vwap_df)
-
-        except Exception as e:
-            st.error(f"Error fetching comparison data: {e}")
+                st.warning("No data available for the selected stock(s) and date range.")
+    else:
+        st.warning("Please select at least one stock.")
 
 # Tab: Stock News
 with tabs[3]:
