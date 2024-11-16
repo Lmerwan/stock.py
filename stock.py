@@ -41,15 +41,23 @@ def render_footer():
     </div>
     """, unsafe_allow_html=True)
 
-# Page Title
+# Render the header
 render_header("📈 S&P 500 Stock Analysis")
 
-# Add a banner image for the app
-st.image(
-    "stock-photo-american-financial-market-index-s-and-p-ticker-spx-on-blue-finance-background-from-numbers-2331803611.jpg",
-    caption="Financial Insights at Your Fingertips",
-    use_column_width=True
-)
+# Resize and display the banner image
+try:
+    # Open the image using Pillow
+    img_path = "stock-photo-american-financial-market-index-s-and-p-ticker-spx-on-blue-finance-background-from-numbers-2331803611.jpg"
+    img = Image.open(img_path)
+
+    # Resize the image to match the header size (e.g., 800x100 pixels)
+    img_resized = img.resize((800, 100))
+
+    # Display the resized image
+    st.image(img_resized, caption="Financial Insights at Your Fingertips", use_column_width=False)
+except Exception as e:
+    st.error(f"Error loading image: {e}")
+
 
 # Create tabs
 tabs = st.tabs(["🏠 Home", "📊 Stock Analysis", "📈 Stock Comparison", "📰 Stock News", "📞 Contacts"])
