@@ -251,25 +251,61 @@ with tabs[1]:
 # Tab: Stock Comparison
 with tabs[2]:
     st.header("📈 Stock Comparison")
-    st.write("Compare the performance of multiple stocks over a selected date range.")
+    st.write("Compare the performance of multiple stocks and explore their correlations.")
 
-    # Comparison logic
-    symbols = st.multiselect("Select Stocks (e.g., AAPL, MSFT, GOOG)", ["AAPL", "MSFT", "GOOG", "AMZN", "TSLA"], default=["AAPL", "MSFT"])
-    date_range = st.slider("Select Date Range", min_value=date.today() - timedelta(days=1825), max_value=date.today(), value=(date.today() - timedelta(days=365), date.today()))
+    # Stock selection
+    symbols = st.multiselect(
+        "Select Stocks (e.g., AAPL, MSFT, GOOG)", 
+        ["AAPL", "MSFT", "GOOG", "AMZN", "TSLA"], 
+        default=["AAPL", "MSFT"]
+    )
 
+    # Date range selection
+    date_range = st.slider(
+        "Select Date Range", 
+        min_value=date.today() - timedelta(days=1825), 
+        max_value=date.today(), 
+        value=(date.today() - timedelta(days=365), date.today())
+    )
+
+    # Fetch and process data
     if symbols:
         try:
-            data = yf.download(symbols, start=date_range[0], end=date_range[1], auto_adjust=True)
-            plt.figure(figsize=(14, 7))
-            for symbol in symbols:
-                sns.lineplot(data=data['Close'][symbol], label=symbol)
-            plt.title("Stock Comparison", fontsize=16)
-            plt.xlabel("Date", fontsize=12)
-            plt.ylabel("Price (USD)", fontsize=12)
-            plt.legend(loc="upper left")
-            st.pyplot(plt)
+            # Download stock data
+            data = yf.download(
+                symbols, 
+                start=date_range[0], 
+                end=date_range[1], 
+                auto_adjust=True
+            )['Close']
+
+            if not data.empty:
+                st.subheader("Stock Prices")
+                st.line_chart(data)  # Line chart to show stock trends
+
+                # Correlation Matrix
+                st.subheader("Stock Correlation Matrix")
+                correlation_matrix = data.corr()
+
+                # Plot correlation matrix as a heatmap
+                plt.figure(figsize=(8, 6))
+                sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt=".2f", linewidths=0.5)
+                plt.title("Stock Price Correlation", fontsize=16)
+                plt.xticks(fontsize=10)
+                plt.yticks(fontsize=10)
+                st.pyplot(plt)  # Display the heatmap
+
+                # Display raw correlation data
+                st.write("Correlation Table:")
+                st.dataframe(correlation_matrix)
+
+            else:
+                st.warning("No data available for the selected stocks or date range.")
         except Exception as e:
             st.error(f"Error fetching comparison data: {e}")
+    else:
+        st.warning("Please select at least one stock.")
+
 
 # Tab: Stock News
 with tabs[3]:
