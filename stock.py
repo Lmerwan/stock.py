@@ -55,6 +55,7 @@ with tabs[0]:
 
 # Tab: Stock Analysis
 # Tab: Stock Analysis
+# Tab: Stock Analysis
 with tabs[1]:
     st.header("Stock Analysis")
     ticker_symbol = st.text_input("Enter stock ticker (e.g., AAPL, MSFT):", "AAPL", key="ticker")
@@ -74,14 +75,14 @@ with tabs[1]:
                 st.subheader(f"Current Price: {data['Close'].iloc[-1]:.2f} USD")
 
                 # Indicator Selection
-                st.sidebar.header("Select Indicators")
-                show_sma_short = st.sidebar.checkbox("Show SMA (Short)")
-                show_sma_long = st.sidebar.checkbox("Show SMA (Long)")
-                show_ema = st.sidebar.checkbox("Show EMA")
-                show_rsi = st.sidebar.checkbox("Show RSI")
-                show_macd = st.sidebar.checkbox("Show MACD")
-                show_vwap = st.sidebar.checkbox("Show VWAP")
-                show_stochastic = st.sidebar.checkbox("Show Stochastic Oscillator")
+                st.subheader("Select Indicators")
+                show_sma_short = st.checkbox("Show SMA (Short)")
+                show_sma_long = st.checkbox("Show SMA (Long)")
+                show_ema = st.checkbox("Show EMA")
+                show_rsi = st.checkbox("Show RSI")
+                show_macd = st.checkbox("Show MACD")
+                show_vwap = st.checkbox("Show VWAP")
+                show_stochastic = st.checkbox("Show Stochastic Oscillator")
 
                 # Plot indicators
                 st.subheader(f"{ticker_symbol} Price Chart with Indicators")
@@ -92,24 +93,24 @@ with tabs[1]:
 
                 # SMA (Short and Long)
                 if show_sma_short:
-                    sma_short_period = st.sidebar.slider("SMA (Short) Period", 5, 50, 20)
+                    sma_short_period = st.slider("SMA (Short) Period", 5, 50, 20)
                     data['SMA_Short'] = data['Close'].rolling(window=sma_short_period).mean()
                     fig.add_trace(go.Scatter(x=data.index, y=data['SMA_Short'], mode='lines', name="SMA (Short)"))
 
                 if show_sma_long:
-                    sma_long_period = st.sidebar.slider("SMA (Long) Period", 50, 200, 100)
+                    sma_long_period = st.slider("SMA (Long) Period", 50, 200, 100)
                     data['SMA_Long'] = data['Close'].rolling(window=sma_long_period).mean()
                     fig.add_trace(go.Scatter(x=data.index, y=data['SMA_Long'], mode='lines', name="SMA (Long)"))
 
                 # EMA
                 if show_ema:
-                    ema_period = st.sidebar.slider("EMA Period", 5, 100, 20)
+                    ema_period = st.slider("EMA Period", 5, 100, 20)
                     data['EMA'] = data['Close'].ewm(span=ema_period, adjust=False).mean()
                     fig.add_trace(go.Scatter(x=data.index, y=data['EMA'], mode='lines', name="EMA"))
 
                 # RSI
                 if show_rsi:
-                    rsi_period = st.sidebar.slider("RSI Period", 5, 50, 14)
+                    rsi_period = st.slider("RSI Period", 5, 50, 14)
                     delta = data['Close'].diff()
                     gain = delta.where(delta > 0, 0)
                     loss = -delta.where(delta < 0, 0)
@@ -117,7 +118,7 @@ with tabs[1]:
                     avg_loss = loss.rolling(window=rsi_period).mean()
                     rs = avg_gain / avg_loss
                     data['RSI'] = 100 - (100 / (1 + rs))
-                    st.line_chart(data['RSI'], width=700, height=300)
+                    st.line_chart(data['RSI'])
 
                 # MACD
                 if show_macd:
@@ -165,21 +166,21 @@ with tabs[2]:
             data = yf.download(symbols, start=date_range[0], end=date_range[1], group_by="ticker")
 
             # Indicator Selection for Comparison
-            st.sidebar.header("Comparison Indicators")
-            show_sma_comparison = st.sidebar.checkbox("SMA")
-            show_ema_comparison = st.sidebar.checkbox("EMA")
-            show_vwap_comparison = st.sidebar.checkbox("VWAP")
+            st.subheader("Select Indicators for Comparison")
+            show_sma_comparison = st.checkbox("SMA")
+            show_ema_comparison = st.checkbox("EMA")
+            show_vwap_comparison = st.checkbox("VWAP")
 
             st.line_chart(data['Close'])
 
             if show_sma_comparison:
-                sma_period = st.sidebar.slider("SMA Period", 5, 50, 20)
+                sma_period = st.slider("SMA Period", 5, 50, 20)
                 for symbol in symbols:
                     data[f'SMA_{symbol}'] = data['Close'][symbol].rolling(window=sma_period).mean()
                     st.line_chart(data[f'SMA_{symbol}'])
 
             if show_ema_comparison:
-                ema_period = st.sidebar.slider("EMA Period", 5, 50, 20)
+                ema_period = st.slider("EMA Period", 5, 50, 20)
                 for symbol in symbols:
                     data[f'EMA_{symbol}'] = data['Close'][symbol].ewm(span=ema_period, adjust=False).mean()
                     st.line_chart(data[f'EMA_{symbol}'])
@@ -192,6 +193,7 @@ with tabs[2]:
 
         except Exception as e:
             st.error(f"Error fetching comparison data: {e}")
+
 
 
 # Tab: Stock News
