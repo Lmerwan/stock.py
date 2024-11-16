@@ -62,13 +62,13 @@ with tabs[0]:
     suite of tools for analyzing S&P 500 stocks and making informed decisions.
     """)
 
-    # Load and display the uploaded image
-    image_path = "/mnt/data/tyler-prahm-lmV3gJSAgbo-unsplash.jpg"
-    try:
-        with open(image_path, "rb") as img_file:
-            st.image(img_file.read(), caption="Dynamic Market Trends", use_column_width=True)
-    except Exception as e:
-        st.error(f"Error loading the image: {e}")
+    # Use the image URL directly
+    st.image(
+        "https://images.unsplash.com/photo-1663355722162-d60e5057ef7f?ixlib=rb-4.0.3&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=1080&fit=max",
+        caption="Dynamic Market Trends",
+        use_column_width=True
+    )
+
 # Tab: Stock Analysis
 with tabs[1]:
     st.header("📊 Stock Analysis")
