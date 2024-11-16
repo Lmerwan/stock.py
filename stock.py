@@ -11,7 +11,7 @@ import yfinance as yf
 import requests
 from bs4 import BeautifulSoup
 import feedparser
-
+from PIL import Image
 # Set the cache directory
 import appdirs as ad
 ad.user_cache_dir = lambda *args: "/tmp"
@@ -62,13 +62,14 @@ with tabs[0]:
     suite of tools for analyzing S&P 500 stocks and making informed decisions.
     """)
 
-    # Use the image URL directly
-    st.image(
-        "tyler-prahm-lmV3gJSAgbo-unsplash.jpg",
-        caption="Dynamic Market Trends",
-        use_column_width=True
-    )
-
+    # Resize and display the banner image
+    home_image_path = "tyler-prahm-lmV3gJSAgbo-unsplash.jpg"
+    try:
+        img = Image.open(home_image_path)
+        img_resized = img.resize((800, 400))  # Resize the image to 800x400 pixels
+        st.image(img_resized, caption="Dynamic Market Trends", use_column_width=False)
+    except Exception as e:
+        st.error(f"Error loading home page image: {e}")
 # Tab: Stock Analysis
 with tabs[1]:
     st.header("📊 Stock Analysis")
@@ -156,8 +157,18 @@ with tabs[2]:
     st.write("""
     Compare the performance of multiple stocks over a selected date range.
     """)
-    st.image("https://cdn.pixabay.com/photo/2018/01/31/07/15/chart-3120463_1280.jpg", caption="Compare Performance Across Stocks")
 
+    # Resize and display comparison image
+    comparison_image_url = "https://cdn.pixabay.com/photo/2018/01/31/07/15/chart-3120463_1280.jpg"
+    try:
+        response = requests.get(comparison_image_url, stream=True)
+        img = Image.open(response.raw)
+        img_resized = img.resize((800, 400))  # Resize the image to 800x400 pixels
+        st.image(img_resized, caption="Compare Performance Across Stocks", use_column_width=False)
+    except Exception as e:
+        st.error(f"Error loading comparison image: {e}")
+
+    # Stock comparison logic
     symbols = st.multiselect("Select Stocks (e.g., AAPL, MSFT, GOOG)", ["AAPL", "MSFT", "GOOG", "AMZN", "TSLA"], default=["AAPL", "MSFT"])
     date_range = st.slider("Select Date Range", min_value=date.today() - timedelta(days=1825), max_value=date.today(), value=(date.today() - timedelta(days=365), date.today()))
 
