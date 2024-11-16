@@ -54,47 +54,145 @@ with tabs[0]:
     st.image("https://st3.depositphotos.com/3108485/32120/i/600/depositphotos_321205098-stock-photo-businessman-plan-graph-growth-and.jpg", caption="Today's Stock Insights")
 
 # Tab: Stock Analysis
+# Tab: Stock Analysis
 with tabs[1]:
     st.header("Stock Analysis")
     ticker_symbol = st.text_input("Enter stock ticker (e.g., AAPL, MSFT):", "AAPL", key="ticker")
     start_date = st.date_input("Start Date", value=date(2022, 1, 1))
     end_date = st.date_input("End Date", value=date.today())
 
-    # Ensure valid date range
     if start_date > end_date:
         st.error("End date must be after the start date.")
     else:
-        try:
-            stock = yf.Ticker(ticker_symbol)
-            data = stock.history(start=start_date, end=end_date)
+        if ticker_symbol:
+            try:
+                # Fetch stock data
+                stock = yf.Ticker(ticker_symbol)
+                data = stock.history(start=start_date, end=end_date)
 
-            # Display current stock data
-            current_price = data['Close'].iloc[-1]
-            st.subheader(f"Current Price: {current_price:.2f} USD")
+                # Display current price
+                st.subheader(f"Current Price: {data['Close'].iloc[-1]:.2f} USD")
 
-            # Simple Moving Average (SMA)
-            sma_period = st.slider("SMA Period", 5, 100, 20)
-            data['SMA'] = data['Close'].rolling(window=sma_period).mean()
-            st.line_chart(data[['Close', 'SMA']])
+                # Indicator Selection
+                st.sidebar.header("Select Indicators")
+                show_sma_short = st.sidebar.checkbox("Show SMA (Short)")
+                show_sma_long = st.sidebar.checkbox("Show SMA (Long)")
+                show_ema = st.sidebar.checkbox("Show EMA")
+                show_rsi = st.sidebar.checkbox("Show RSI")
+                show_macd = st.sidebar.checkbox("Show MACD")
+                show_vwap = st.sidebar.checkbox("Show VWAP")
+                show_stochastic = st.sidebar.checkbox("Show Stochastic Oscillator")
 
-        except Exception as e:
-            st.error(f"Error fetching stock data: {e}")
+                # Plot indicators
+                st.subheader(f"{ticker_symbol} Price Chart with Indicators")
+                fig = go.Figure()
+
+                # Add Close Price
+                fig.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name="Close Price"))
+
+                # SMA (Short and Long)
+                if show_sma_short:
+                    sma_short_period = st.sidebar.slider("SMA (Short) Period", 5, 50, 20)
+                    data['SMA_Short'] = data['Close'].rolling(window=sma_short_period).mean()
+                    fig.add_trace(go.Scatter(x=data.index, y=data['SMA_Short'], mode='lines', name="SMA (Short)"))
+
+                if show_sma_long:
+                    sma_long_period = st.sidebar.slider("SMA (Long) Period", 50, 200, 100)
+                    data['SMA_Long'] = data['Close'].rolling(window=sma_long_period).mean()
+                    fig.add_trace(go.Scatter(x=data.index, y=data['SMA_Long'], mode='lines', name="SMA (Long)"))
+
+                # EMA
+                if show_ema:
+                    ema_period = st.sidebar.slider("EMA Period", 5, 100, 20)
+                    data['EMA'] = data['Close'].ewm(span=ema_period, adjust=False).mean()
+                    fig.add_trace(go.Scatter(x=data.index, y=data['EMA'], mode='lines', name="EMA"))
+
+                # RSI
+                if show_rsi:
+                    rsi_period = st.sidebar.slider("RSI Period", 5, 50, 14)
+                    delta = data['Close'].diff()
+                    gain = delta.where(delta > 0, 0)
+                    loss = -delta.where(delta < 0, 0)
+                    avg_gain = gain.rolling(window=rsi_period).mean()
+                    avg_loss = loss.rolling(window=rsi_period).mean()
+                    rs = avg_gain / avg_loss
+                    data['RSI'] = 100 - (100 / (1 + rs))
+                    st.line_chart(data['RSI'], width=700, height=300)
+
+                # MACD
+                if show_macd:
+                    short_ema = data['Close'].ewm(span=12, adjust=False).mean()
+                    long_ema = data['Close'].ewm(span=26, adjust=False).mean()
+                    data['MACD'] = short_ema - long_ema
+                    data['Signal'] = data['MACD'].ewm(span=9, adjust=False).mean()
+                    fig.add_trace(go.Scatter(x=data.index, y=data['MACD'], mode='lines', name="MACD"))
+                    fig.add_trace(go.Scatter(x=data.index, y=data['Signal'], mode='lines', name="MACD Signal"))
+
+                # VWAP
+                if show_vwap:
+                    data['VWAP'] = (data['Volume'] * (data['High'] + data['Low'] + data['Close']) / 3).cumsum() / data['Volume'].cumsum()
+                    fig.add_trace(go.Scatter(x=data.index, y=data['VWAP'], mode='lines', name="VWAP"))
+
+                # Stochastic Oscillator
+                if show_stochastic:
+                    low_min = data['Low'].rolling(window=14).min()
+                    high_max = data['High'].rolling(window=14).max()
+                    data['%K'] = (data['Close'] - low_min) * 100 / (high_max - low_min)
+                    data['%D'] = data['%K'].rolling(window=3).mean()
+                    fig.add_trace(go.Scatter(x=data.index, y=data['%K'], mode='lines', name="Stochastic %K"))
+                    fig.add_trace(go.Scatter(x=data.index, y=data['%D'], mode='lines', name="Stochastic %D"))
+
+                # Update figure layout
+                fig.update_layout(
+                    title=f"{ticker_symbol} Price Chart",
+                    xaxis_title="Date",
+                    yaxis_title="Price (USD)",
+                    xaxis_rangeslider_visible=True
+                )
+                st.plotly_chart(fig)
+
+            except Exception as e:
+                st.error(f"Error fetching data for {ticker_symbol}: {e}")
 
 # Tab: Stock Comparison
 with tabs[2]:
     st.header("Stock Comparison")
-    st.write("Compare the performance of different stocks over a selected date range.")
     symbols = st.multiselect("Select Stocks", ["AAPL", "MSFT", "GOOG", "AMZN", "TSLA"], default=["AAPL"])
-    date_range = st.slider("Date Range", min_value=date.today() - timedelta(days=1825), max_value=date.today(), value=(date.today() - timedelta(days=365), date.today()))
+    date_range = st.slider("Select Date Range", min_value=date.today() - timedelta(days=1825), max_value=date.today(), value=(date.today() - timedelta(days=365), date.today()))
 
     if symbols:
         try:
-            data = yf.download(symbols, start=date_range[0], end=date_range[1], group_by="ticker")['Close']
-            st.line_chart(data)
+            data = yf.download(symbols, start=date_range[0], end=date_range[1], group_by="ticker")
+
+            # Indicator Selection for Comparison
+            st.sidebar.header("Comparison Indicators")
+            show_sma_comparison = st.sidebar.checkbox("SMA")
+            show_ema_comparison = st.sidebar.checkbox("EMA")
+            show_vwap_comparison = st.sidebar.checkbox("VWAP")
+
+            st.line_chart(data['Close'])
+
+            if show_sma_comparison:
+                sma_period = st.sidebar.slider("SMA Period", 5, 50, 20)
+                for symbol in symbols:
+                    data[f'SMA_{symbol}'] = data['Close'][symbol].rolling(window=sma_period).mean()
+                    st.line_chart(data[f'SMA_{symbol}'])
+
+            if show_ema_comparison:
+                ema_period = st.sidebar.slider("EMA Period", 5, 50, 20)
+                for symbol in symbols:
+                    data[f'EMA_{symbol}'] = data['Close'][symbol].ewm(span=ema_period, adjust=False).mean()
+                    st.line_chart(data[f'EMA_{symbol}'])
+
+            if show_vwap_comparison:
+                for symbol in symbols:
+                    high_low_close = data['High'][symbol] + data['Low'][symbol] + data['Close'][symbol]
+                    data[f'VWAP_{symbol}'] = (data['Volume'][symbol] * high_low_close / 3).cumsum() / data['Volume'][symbol].cumsum()
+                    st.line_chart(data[f'VWAP_{symbol}'])
+
         except Exception as e:
-            st.error(f"Error fetching stock comparison data: {e}")
-    else:
-        st.warning("Please select at least one stock.")
+            st.error(f"Error fetching comparison data: {e}")
+
 
 # Tab: Stock News
 with tabs[3]:
