@@ -64,7 +64,7 @@ with tabs[0]:
 
     # Use the image URL directly
     st.image(
-        "https://images.unsplash.com/photo-1663355722162-d60e5057ef7f?ixlib=rb-4.0.3&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=1080&fit=max",
+        "tyler-prahm-lmV3gJSAgbo-unsplash.jpg",
         caption="Dynamic Market Trends",
         use_column_width=True
     )
