@@ -70,11 +70,12 @@ with tabs[0]:
     """)
 
     # Display a home image
-    display_image(
+    st.image(
         "tyler-prahm-lmV3gJSAgbo-unsplash.jpg",
-        "Dynamic Market Trends",
-        height=300
+        caption="Dynamic Market Trends",
+        use_column_width=True
     )
+
 
 with tabs[1]:
     st.header("📊 Stock Analysis")
