@@ -46,7 +46,7 @@ render_header("📈 S&P 500 Stock Analysis")
 
 # Add a banner image for the app
 st.image(
-    "https://cdn.pixabay.com/photo/2015/07/17/22/43/student-849828_1280.jpg",
+    "stock-photo-american-financial-market-index-s-and-p-ticker-spx-on-blue-finance-background-from-numbers-2331803611.jpg",
     caption="Financial Insights at Your Fingertips",
     use_column_width=True
 )
