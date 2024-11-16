@@ -247,18 +247,17 @@ with tabs[1]:
             except Exception as e:
                 st.error(f"Error fetching data for {ticker_symbol}: {e}")
 
-
 # Tab: Stock Comparison
 with tabs[2]:
-    st.header("📈 Stock Comparison and Recommendations")
-    st.write("Compare the performance of multiple stocks and get insights, including recommendations.")
+    st.header("📈 Stock Comparison and Correlations")
+    st.write("Compare the performance of multiple stocks and explore their correlations.")
 
-    # Stock selection
-    symbols = st.multiselect(
-        "Select Stocks (e.g., AAPL, MSFT, GOOG)", 
-        ["AAPL", "MSFT", "GOOG", "AMZN", "TSLA"], 
-        default=["AAPL", "MSFT"]
+    # User inputs for stock symbols
+    stock_symbols_input = st.text_area(
+        "Enter stock tickers separated by commas (e.g., AAPL, MSFT, GOOG):", 
+        value="AAPL, MSFT, GOOG"
     )
+    stock_symbols = [symbol.strip().upper() for symbol in stock_symbols_input.split(",") if symbol.strip()]
 
     # Date range selection
     date_range = st.slider(
@@ -268,20 +267,20 @@ with tabs[2]:
         value=(date.today() - timedelta(days=365), date.today())
     )
 
-    # Fetch and process data
-    if symbols:
+    if stock_symbols:
         try:
-            # Download stock data
+            # Fetch stock data dynamically
             data = yf.download(
-                symbols, 
+                stock_symbols, 
                 start=date_range[0], 
                 end=date_range[1], 
                 auto_adjust=True
             )['Close']
 
             if not data.empty:
+                # Display stock trends
                 st.subheader("Stock Prices")
-                st.line_chart(data)  # Line chart to show stock trends
+                st.line_chart(data)
 
                 # Correlation Matrix
                 st.subheader("Stock Correlation Matrix")
@@ -293,12 +292,12 @@ with tabs[2]:
                 plt.title("Stock Price Correlation", fontsize=16)
                 plt.xticks(fontsize=10)
                 plt.yticks(fontsize=10)
-                st.pyplot(plt)  # Display the heatmap
+                st.pyplot(plt)
 
                 # Pairwise Scatter Plot for Correlations
-                st.subheader("Pairwise Correlation Scatter Plot")
-                for i, stock_x in enumerate(symbols):
-                    for j, stock_y in enumerate(symbols):
+                st.subheader("Pairwise Correlation Scatter Plots")
+                for i, stock_x in enumerate(stock_symbols):
+                    for j, stock_y in enumerate(stock_symbols):
                         if i < j:  # Avoid duplicate pairs and self-correlation
                             plt.figure(figsize=(6, 4))
                             sns.scatterplot(x=data[stock_x], y=data[stock_y], alpha=0.7)
@@ -316,81 +315,7 @@ with tabs[2]:
         except Exception as e:
             st.error(f"Error fetching comparison data: {e}")
     else:
-        st.warning("Please select at least one stock.")
-
-    # Ticker Recommendation Section
-    st.subheader("Single Stock Recommendation")
-    ticker_symbol = st.text_input("Enter a stock ticker for analysis (e.g., AAPL):")
-
-    if ticker_symbol:
-        try:
-            # Fetch stock data
-            stock = yf.Ticker(ticker_symbol)
-            data = stock.history(start=date_range[0], end=date_range[1])
-
-            if not data.empty:
-                st.write(f"**Ticker:** {ticker_symbol.upper()}")
-                st.write(f"**Current Price:** {data['Close'].iloc[-1]:.2f} USD")
-
-                # Recommendations using indicators
-                st.subheader("Technical Indicators")
-                show_sma = st.checkbox("Show SMA")
-                show_ema = st.checkbox("Show EMA")
-                show_rsi = st.checkbox("Show RSI")
-
-                buy_signals = 0
-                sell_signals = 0
-
-                # SMA
-                if show_sma:
-                    sma_period = st.slider("SMA Period", 5, 50, 20)
-                    data['SMA'] = data['Close'].rolling(window=sma_period).mean()
-                    st.line_chart(data[['Close', 'SMA']])
-                    if data['Close'].iloc[-1] > data['SMA'].iloc[-1]:
-                        buy_signals += 1
-                    else:
-                        sell_signals += 1
-
-                # EMA
-                if show_ema:
-                    ema_period = st.slider("EMA Period", 5, 50, 20)
-                    data['EMA'] = data['Close'].ewm(span=ema_period, adjust=False).mean()
-                    st.line_chart(data[['Close', 'EMA']])
-                    if data['Close'].iloc[-1] > data['EMA'].iloc[-1]:
-                        buy_signals += 1
-                    else:
-                        sell_signals += 1
-
-                # RSI
-                if show_rsi:
-                    rsi_period = st.slider("RSI Period", 5, 50, 14)
-                    delta = data['Close'].diff()
-                    gain = delta.where(delta > 0, 0)
-                    loss = -delta.where(delta < 0, 0)
-                    avg_gain = gain.rolling(window=rsi_period).mean()
-                    avg_loss = loss.rolling(window=rsi_period).mean()
-                    rs = avg_gain / avg_loss
-                    data['RSI'] = 100 - (100 / (1 + rs))
-                    st.line_chart(data['RSI'])
-                    if data['RSI'].iloc[-1] < 30:
-                        buy_signals += 1
-                    elif data['RSI'].iloc[-1] > 70:
-                        sell_signals += 1
-
-                # Recommendation Summary
-                st.subheader("Recommendation Summary")
-                st.write(f"**Buy Signals:** {buy_signals}")
-                st.write(f"**Sell Signals:** {sell_signals}")
-                if buy_signals > sell_signals:
-                    st.success("Recommendation: BUY")
-                elif sell_signals > buy_signals:
-                    st.error("Recommendation: SELL")
-                else:
-                    st.info("Recommendation: HOLD")
-            else:
-                st.warning("No data available for this ticker or date range.")
-        except Exception as e:
-            st.error(f"Error fetching data for {ticker_symbol}: {e}")
+        st.warning("Please enter at least one stock ticker.")
 
 
 # Tab: Stock News
